@@ -7,6 +7,7 @@ from dowel.logger import Logger, LoggerWarning, LogOutput
 from dowel.simple_outputs import StdOutput, TextOutput
 from dowel.tabular_input import TabularInput
 from dowel.csv_output import CsvOutput  # noqa: I100
+from dowel.npz_output import NpzOutput
 from dowel.tensor_board_output import TensorBoardOutput
 
 logger = Logger()
@@ -16,6 +17,7 @@ __all__ = [
     'Histogram',
     'Logger',
     'CsvOutput',
+    'NpzOutput',
     'StdOutput',
     'TextOutput',
     'LogOutput',
