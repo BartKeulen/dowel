@@ -53,13 +53,13 @@ class NpzOutput(LogOutput):
         file_path.parent.mkdir(parents=True, exist_ok=True)
         self._file_path = file_path
         
-        self._tmpdir = tempfile.TemporaryDirectory()
-        self._tmpdir_path = Path(self._tmpdir.name)
-        self._tmpfiles = {}
+        # self._tmpdir = tempfile.TemporaryDirectory()
+        # self._tmpdir_path = Path(self._tmpdir.name)
+        # self._tmpfiles = {}
         self._compressed = compressed
 
         self._fieldnames = None
-        self._shapes = {}
+        self._data = {}
 
     @property
     def types_accepted(self):
@@ -76,21 +76,10 @@ class NpzOutput(LogOutput):
             if not self._fieldnames:
                 self._fieldnames = set(to_dict.keys())
                 for key, val in sorted(to_dict.items()):
-                    # Store shape of array
-                    if isinstance(val, np.ndarray):
-                        self._shapes[key] = val.shape
-
-                    # Open .npy file
-                    fp = open(self._tmpdir_path / '{}.npy'.format(key), 'w')
-                    self._tmpfiles[key] = fp
-
-                    # Write header
-                    header_dict = np.lib.format.header_data_from_array_1_0(val) 
-                    np.lib.format._write_array_header(fp, header_dict, None)
+                    self._data[key] = []
 
 
             if set(to_dict.keys()) != self._fieldnames:
-                self.close()
                 raise ValueError(
                     "Inconsistent TabularInput keys detected. "
                     "NpzOutput keys: {}. "
@@ -111,43 +100,19 @@ class NpzOutput(LogOutput):
                     self.close()
                     raise NotImplementedError()
 
-                if isinstance(val, np.ndarray) and self._shapes[key] != val.shape:
-                    self.close()
+                if isinstance(val, np.ndarray) and len(self._data[key]) > 0 and self._data[key][0].shape != val.shape:
                     raise ValueError(
                         "Wrong shape for key: '{}'. Got {}, but should be {}".format(
                             key, val.shape, self._data[key][0].shape
                         )
                     )
 
-                self._write_array(key, val)
+                self._data[key].append(val)
 
             for k in to_dict.keys():
                 data.mark(k)
         else:
             raise ValueError("Unacceptable type.")
-
-    def _write_array(self, key, array):
-        if array.itemsize == 0:
-            buffersize = 0
-        else:
-            # Set buffer size to 16 MiB to hide the Python loop overhead.
-            buffersize = max(16 * 1024 ** 2 // array.itemsize, 1)
-
-        fp = self._tmpfiles[key]
-        if array.flags.f_contiguous and not array.flags.c_contiguous:
-            order = 'F'
-        else:
-            order = 'C'
-
-        for chunk in numpy.nditer(
-                array, flags=['external_loop', 'buffered', 'zerosize_ok'],
-                buffersize=buffersize, order=order):
-            fp.write(chunk.tobytes('C'))
-
-    def close(self):
-        for f in self._tmpfiles:
-            if not f.closed:
-                f.close()
 
     def dump(self, step=None):
         """Dump the contents of this output.
