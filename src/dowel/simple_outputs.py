@@ -6,6 +6,7 @@ import abc
 import datetime
 import os
 import sys
+from pathlib import Path
 
 import dateutil.tz
 
@@ -57,9 +58,17 @@ class FileOutput(LogOutput, metaclass=abc.ABCMeta):
     """
 
     def __init__(self, file_name, mode='w'):
-        mkdir_p(os.path.dirname(file_name))
+        if not isinstance(file_name, Path):
+            file_name = Path(file_name)
+
+        # Create parent directory
+        file_name.parent.mkdir(parents=True, exist_ok=True)
+
+        # Create empty file if not exists
+        file_name.touch(exist_ok=True)
+
         # Open the log file in child class
-        self._log_file = open(file_name, mode)
+        self._log_file = file_name.open(mode=mode)
 
     def close(self):
         """Close any files used by the output."""

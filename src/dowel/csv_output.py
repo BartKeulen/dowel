@@ -1,6 +1,7 @@
 """A `dowel.logger.LogOutput` for CSV files."""
 import csv
 import warnings
+from pathlib import Path
 
 from dowel import TabularInput
 from dowel.simple_outputs import FileOutput
@@ -14,7 +15,7 @@ class CsvOutput(FileOutput):
     """
 
     def __init__(self, file_name):
-        super().__init__(file_name)
+        super().__init__(file_name, mode='a')
         self._writer = None
         self._fieldnames = None
         self._warned_once = set()
@@ -39,7 +40,9 @@ class CsvOutput(FileOutput):
                     self._log_file,
                     fieldnames=self._fieldnames,
                     extrasaction='ignore')
-                self._writer.writeheader()
+                
+                if self._log_file.tell() == 0:
+                    self._writer.writeheader()
 
             if to_csv.keys() != self._fieldnames:
                 self._warn('Inconsistent TabularInput keys detected. '
